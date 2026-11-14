@@ -1,0 +1,7 @@
+# Projet Xcode généré par XcodeGen (recréé à chaque compilation)
+*.xcodeproj/
+# Produits de compilation
+build/
+Payload/
+*.ipa
+.DS_Store
