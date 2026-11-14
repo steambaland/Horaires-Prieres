@@ -21,6 +21,7 @@ private let country = "France"
 
 /// Méthode de calcul Aladhan. 12 = UOIF (Musulmans de France).
 private let method = 12
+private let methodeCalcul = method
 
 /// `false` : le Chourouk (lever du soleil) est affiché dans la rangée du bas
 /// mais n'est jamais annoncé comme « prochaine prière ». Mettre `true` pour l'inclure.
@@ -986,7 +987,7 @@ final class ViewController: UIViewController {
         composants?.queryItems = [
             URLQueryItem(name: "city", value: city),
             URLQueryItem(name: "country", value: country),
-            URLQueryItem(name: "method", value: String(method))
+            URLQueryItem(name: "method", value: String(methodeCalcul))
         ]
         return composants?.url
     }
