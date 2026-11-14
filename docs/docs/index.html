@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Prières</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Prières">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+/* ===================================================================
+   Styles — compatibles Safari iOS 12 (pas de « gap » en flexbox,
+   pas de clamp(), pas de aspect-ratio). Toutes les tailles sont en rem :
+   le script règle la taille de base selon l'écran.
+   =================================================================== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
+  background: #FAF8F5; color: #141414;
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+#app {
+  position: absolute; top: 0; left: 0; width: 100%;
+  display: flex; flex-direction: column;
+  padding: 2rem 2.8rem 1.2rem;
+}
+
+/* 1. Bandeau supérieur */
+#entete { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; }
+#btnVille {
+  display: flex; align-items: center; min-width: 0; max-width: 62%;
+  background: none; border: 0; padding: 0; margin: 0; font: inherit; color: #141414;
+  cursor: pointer; text-align: left;
+}
+#nomVille { font-size: 6rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#nomVille.long { font-size: 4.6rem; }
+#nomVille.tresLong { font-size: 3.6rem; }
+#chipVille {
+  flex: 0 0 auto; margin-left: 1.4rem; padding: .7rem 1.4rem;
+  font-size: 2.2rem; font-weight: 700; color: #0F5132;
+  border: .3rem solid #0F5132; border-radius: 2.4rem; white-space: nowrap;
+}
+#dates { text-align: right; margin-left: 1.6rem; min-width: 0; }
+#dateGreg { font-size: 3.2rem; font-weight: 700; white-space: nowrap; }
+#dateHegire { font-size: 2.8rem; font-weight: 600; color: #4A4640; white-space: nowrap; margin-top: .2rem; }
+
+/* 2. Zone centrale : horloge + prochaine prière */
+#centre { flex: 1 1 0; min-height: 0; display: flex; margin-top: 1.4rem; }
+.paysage #centre { flex-direction: row; }
+.portrait #centre { flex-direction: column; }
+#horloge {
+  flex: 1 1 0; min-width: 0; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+#hm { font-size: 13rem; font-weight: 700; line-height: 1; }
+.portrait #hm { font-size: 15rem; }
+#sec { font-size: 5.4rem; font-weight: 600; color: #4A4640; margin-left: 1.2rem; line-height: 1; }
+#prochaine {
+  background: #0F5132; color: #fff; border-radius: 2.8rem; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 1.4rem 1.6rem; min-width: 0; min-height: 0;
+}
+.paysage #prochaine { flex: 0 0 43%; margin-left: 2.4rem; }
+.portrait #prochaine { flex: 0 0 56%; margin-top: 1.4rem; }
+#titreProchaine { font-size: 2.8rem; font-weight: 700; color: #FBBF24; white-space: nowrap; }
+#nomProchaine { font-size: 5.6rem; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+#heureProchaine { font-size: 10.8rem; font-weight: 700; line-height: 1.05; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.portrait #heureProchaine { font-size: 12rem; }
+#resteProchaine { font-size: 3.6rem; font-weight: 700; color: #FBBF24; white-space: nowrap; margin-top: .4rem; }
+
+/* 3. Météo : aujourd'hui + 3 jours */
+#meteo {
+  flex: 0 0 auto; margin-top: 1.4rem;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-gap: 1.2rem; gap: 1.2rem;
+}
+.portrait #meteo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.carteM {
+  background: #fff; border: .2rem solid #CFC6B8; border-radius: 1.8rem;
+  padding: .9rem 1.2rem; display: flex; align-items: center; min-width: 0;
+}
+.carteM.auj { border: .3rem solid #0F5132; padding: .8rem 1.1rem; }
+.carteM .emo { flex: 0 0 auto; font-size: 5rem; line-height: 1; margin-right: 1rem; min-width: 5.6rem; text-align: center; }
+.carteM .txt { min-width: 0; }
+.carteM .jour { font-size: 2.2rem; font-weight: 700; white-space: nowrap; color: #4A4640; }
+.carteM .temps { font-size: 3rem; font-weight: 800; white-space: nowrap; line-height: 1.15; }
+.carteM .temps .mini { font-weight: 600; color: #4A4640; }
+.carteM .pluie { font-size: 2rem; font-weight: 600; white-space: nowrap; color: #4A4640; }
+
+/* 4. Horaires du jour */
+#titreJour { flex: 0 0 auto; margin-top: 1.4rem; font-size: 2.2rem; font-weight: 700; color: #4A4640; }
+#grille {
+  flex: 0 0 auto; margin-top: .8rem;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-gap: 1.2rem; gap: 1.2rem;
+}
+.portrait #grille { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.priere {
+  background: #fff; border: .2rem solid #CFC6B8; border-radius: 1.8rem;
+  padding: 1.2rem .6rem; text-align: center; min-width: 0;
+}
+.priere .nom { font-size: 2.8rem; font-weight: 700; white-space: nowrap; }
+.priere .heure { font-size: 4.4rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; margin-top: .4rem; }
+.portrait .priere .nom { font-size: 3.2rem; }
+.portrait .priere .heure { font-size: 4.8rem; }
+.priere.passee { opacity: .45; }
+.priere.suivante { background: #0F5132; border: .6rem solid #FBBF24; padding: 1rem .4rem; }
+.priere.suivante .nom { color: #FBBF24; }
+.priere.suivante .heure { color: #fff; }
+
+#etat { flex: 0 0 auto; margin-top: 1rem; text-align: center; font-size: 1.6rem; font-weight: 500; color: #4A4640; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#etat.alerte { color: #9A3412; font-weight: 700; }
+
+/* 5. Panneau « Choisir une ville » (plein écran) */
+#panneau {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;
+  background: #FAF8F5; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  -webkit-user-select: text; user-select: text;
+}
+#panneauInt { max-width: 76rem; margin: 0 auto; padding: 2.4rem 2.4rem 6rem; }
+#panneauTete { display: flex; align-items: center; justify-content: space-between; }
+#panneauTitre { font-size: 4rem; font-weight: 800; }
+#btnFermer {
+  background: #0F5132; color: #fff; border: 0; border-radius: 1.6rem;
+  font: inherit; font-size: 3rem; font-weight: 700; padding: 1.2rem 3rem; cursor: pointer;
+}
+#champ {
+  display: block; width: 100%; margin-top: 2rem; padding: 1.6rem 2rem;
+  font: inherit; font-size: 3.2rem; color: #141414; background: #fff;
+  border: .3rem solid #0F5132; border-radius: 1.6rem; -webkit-appearance: none; appearance: none;
+  -webkit-user-select: text; user-select: text;
+}
+.titreListe { font-size: 2.4rem; font-weight: 700; color: #4A4640; margin: 3rem 0 1rem; }
+.msg { font-size: 2.6rem; color: #4A4640; padding: 1.2rem .4rem; }
+.ligne {
+  display: flex; align-items: stretch; background: #fff; border: .2rem solid #CFC6B8;
+  border-radius: 1.8rem; margin-bottom: 1.2rem; overflow: hidden;
+}
+.ligne.courante { border: .4rem solid #0F5132; }
+.ligne .zone { flex: 1 1 auto; min-width: 0; padding: 1.4rem 2rem; cursor: pointer; }
+.ligne .nomv { font-size: 3.2rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ligne .detv { font-size: 2.2rem; color: #4A4640; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: .2rem; }
+.ligne .etoile {
+  flex: 0 0 9rem; display: flex; align-items: center; justify-content: center;
+  font-size: 5rem; color: #B8AFA2; border-left: .2rem solid #CFC6B8; cursor: pointer;
+}
+.ligne .etoile.on { color: #E0A300; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <div id="entete">
+    <button id="btnVille" type="button">
+      <span id="nomVille">…</span>
+      <span id="chipVille">Changer ▾</span>
+    </button>
+    <div id="dates">
+      <div id="dateGreg">&nbsp;</div>
+      <div id="dateHegire">&nbsp;</div>
+    </div>
+  </div>
+
+  <div id="centre">
+    <div id="horloge"><span id="hm">--:--</span><span id="sec">--</span></div>
+    <div id="prochaine">
+      <div id="titreProchaine">PROCHAINE PRIÈRE</div>
+      <div id="nomProchaine">—</div>
+      <div id="heureProchaine">--:--</div>
+      <div id="resteProchaine">&nbsp;</div>
+    </div>
+  </div>
+
+  <div id="meteo"></div>
+
+  <div id="titreJour">HORAIRES DU JOUR</div>
+  <div id="grille"></div>
+
+  <div id="etat">Chargement…</div>
+</div>
+
+<div id="panneau">
+  <div id="panneauInt">
+    <div id="panneauTete">
+      <div id="panneauTitre">Choisir une ville</div>
+      <button id="btnFermer" type="button">Fermer</button>
+    </div>
+    <input id="champ" type="text" placeholder="Tapez le nom d’une ville"
+           autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+    <div id="blocResultats" style="display:none">
+      <div class="titreListe">RÉSULTATS</div>
+      <div id="listeResultats"></div>
+    </div>
+    <div class="titreListe">⭐ MES FAVORIS</div>
+    <div id="listeFavoris"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================================================================
+     RÉGLAGES
+     ================================================================ */
+
+  // Méthode de calcul Aladhan : 12 = UOIF (Musulmans de France).
+  var METHODE = 12;
+
+  // false : le Chourouk est affiché mais jamais annoncé comme « prochaine prière ».
+  var CHOUROUK_PROCHAINE = false;
+
+  // Villes proposées au premier lancement. La première est affichée au départ.
+  var VILLES_DEFAUT = [
+    { id: 'vernouillet-28', nom: 'Vernouillet', detail: 'Eure-et-Loir (28)', lat: 48.7217, lon: 1.3614, tz: 'Europe/Paris' },
+    { id: 'massy-91', nom: 'Massy', detail: 'Essonne (91)', lat: 48.7309, lon: 2.2713, tz: 'Europe/Paris' }
+  ];
+
+  var DELAI_ACTU = 3600000;   // actualisation normale : toutes les heures
+  var DELAI_RETRY = 60000;    // nouvel essai chaque minute quand la connexion est coupée
+
+  /* ================================================================
+     DONNÉES FIXES
+     ================================================================ */
+
+  var PRIERES = [
+    { cle: 'Fajr', nom: 'Fajr' },
+    { cle: 'Sunrise', nom: 'Chourouk' },
+    { cle: 'Dhuhr', nom: 'Dhouhr' },
+    { cle: 'Asr', nom: 'Asr' },
+    { cle: 'Maghrib', nom: 'Maghrib' },
+    { cle: 'Isha', nom: 'Isha' }
+  ];
+  var NOM_PRIERE = {};
+  PRIERES.forEach(function (p) { NOM_PRIERE[p.cle] = p.nom; });
+
+  var JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  var MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août',
+              'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  var MOIS_HEGIRE = ['Mouharram', 'Safar', 'Rabi’ al-Awwal', 'Rabi’ ath-Thani',
+                     'Joumada al-Oula', 'Joumada ath-Thania', 'Rajab', 'Chaabane',
+                     'Ramadan', 'Chawwal', 'Dhou al-Qi’da', 'Dhou al-Hijja'];
+  var JOUR_MS = 86400000;
+
+  /* ================================================================
+     STOCKAGE LOCAL (localStorage, avec repli en mémoire)
+     ================================================================ */
+
+  var memoire = {};
+  function lire(cle, defaut) {
+    try {
+      var s = window.localStorage.getItem(cle);
+      if (s === null) { return (cle in memoire) ? memoire[cle] : defaut; }
+      return JSON.parse(s);
+    } catch (e) {
+      return (cle in memoire) ? memoire[cle] : defaut;
+    }
+  }
+  function ecrire(cle, valeur) {
+    memoire[cle] = valeur;
+    try { window.localStorage.setItem(cle, JSON.stringify(valeur)); } catch (e) { /* ignoré */ }
+  }
+
+  /* ================================================================
+     DATES ET HEURES DANS LE FUSEAU DE LA VILLE
+     L'heure « murale » de la ville est représentée par un instant fictif
+     en UTC (« pseudo ») : les différences entre deux heures restent justes.
+     ================================================================ */
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  var formateurs = {};
+  function formateurPour(tz) {
+    if (!(tz in formateurs)) {
+      try {
+        formateurs[tz] = new Intl.DateTimeFormat('en-GB', {
+          timeZone: tz, hour12: false,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+      } catch (e) { formateurs[tz] = null; }
+    }
+    return formateurs[tz];
+  }
+
+  function maintenantVille(tz, ts) {
+    var t = (ts === undefined) ? Date.now() : ts;
+    var f = formateurPour(tz);
+    var y, m, d, h, mi, s;
+    if (f && typeof f.formatToParts === 'function') {
+      var parts = f.formatToParts(new Date(t)), o = {};
+      for (var i = 0; i < parts.length; i++) { o[parts[i].type] = parts[i].value; }
+      y = +o.year; m = +o.month; d = +o.day;
+      h = (+o.hour) % 24; mi = +o.minute; s = +o.second;
+    } else {
+      var dt = new Date(t);   // repli : heure de l'iPad
+      y = dt.getFullYear(); m = dt.getMonth() + 1; d = dt.getDate();
+      h = dt.getHours(); mi = dt.getMinutes(); s = dt.getSeconds();
+    }
+    return { y: y, m: m, d: d, h: h, mi: mi, s: s, pseudo: Date.UTC(y, m - 1, d, h, mi, s) };
+  }
+
+  /** « JJ-MM-AAAA » du jour contenant l'instant fictif p. */
+  function cleDe(p) {
+    var d = new Date(p);
+    return pad(d.getUTCDate()) + '-' + pad(d.getUTCMonth() + 1) + '-' + d.getUTCFullYear();
+  }
+  /** « AAAA-MM-JJ » du jour contenant l'instant fictif p. */
+  function isoDe(p) {
+    var d = new Date(p);
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+  }
+  /** Instant fictif du jour « JJ-MM-AAAA » à l'heure « HH:mm ». */
+  function pseudoDe(cle, hhmm) {
+    var a = cle.split('-'), h = 0, m = 0;
+    if (hhmm) { var b = hhmm.split(':'); h = +b[0]; m = +b[1]; }
+    return Date.UTC(+a[2], +a[1] - 1, +a[0], h, m, 0);
+  }
+  function triable(cle) { var a = cle.split('-'); return a[2] + a[1] + a[0]; }
+
+  function dateFrancaise(now) {
+    var dow = new Date(Date.UTC(now.y, now.m - 1, now.d)).getUTCDay();
+    return JOURS[dow] + ' ' + (now.d === 1 ? '1er' : now.d) + ' ' + MOIS[now.m - 1] + ' ' + now.y;
+  }
+  function dateHegirienne(jour) {
+    if (!jour || !(jour.jh > 0) || !(jour.ah > 0) || !(jour.mh >= 1 && jour.mh <= 12)) { return ' '; }
+    return (jour.jh === 1 ? '1er' : jour.jh) + ' ' + MOIS_HEGIRE[jour.mh - 1] + ' ' + jour.ah + ' H';
+  }
+  function hm(now) { return pad(now.h) + ':' + pad(now.mi); }
+
+  /* ================================================================
+     DÉCODAGE DES RÉPONSES (tolérant : texte ou nombre acceptés)
+     ================================================================ */
+
+  function entier(v) {
+    if (typeof v === 'number') { return Math.round(v); }
+    var n = parseInt(String(v), 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  /** « 05:43 (CET) » → « 05:43 » ; null si illisible. */
+  function nettoyerHeure(brut) {
+    if (typeof brut !== 'string') { return null; }
+    var sans = brut.replace(/^\s+|\s+$/g, '').split(' ')[0];
+    var p = sans.split(':');
+    if (p.length < 2) { return null; }
+    var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) { return null; }
+    return pad(h) + ':' + pad(m);
+  }
+
+  /** Réponse Aladhan → { cle, horaires, jh, mh, ah } ou null si incomplète. */
+  function decoderPrieres(json) {
+    var d = json && json.data;
+    if (!d || !d.timings || !d.date || !d.date.gregorian || !d.date.hijri) { return null; }
+    var horaires = {};
+    for (var i = 0; i < PRIERES.length; i++) {
+      var h = nettoyerHeure(d.timings[PRIERES[i].cle]);
+      if (!h) { return null; }
+      horaires[PRIERES[i].cle] = h;
+    }
+    var g = String(d.date.gregorian.date || '').split('-');
+    if (g.length !== 3) { return null; }
+    var cle = pad(+g[0]) + '-' + pad(+g[1]) + '-' + g[2];
+    var hj = d.date.hijri;
+    return {
+      cle: cle, horaires: horaires,
+      jh: entier(hj.day), mh: entier(hj.month && hj.month.number), ah: entier(hj.year)
+    };
+  }
+
+  /** Réponse Open-Meteo → { time, code, max, min, pluie } ou null. */
+  function decoderMeteo(json) {
+    var j = json && json.daily;
+    if (!j || !j.time || !j.time.length) { return null; }
+    var codes = j.weather_code || j.weathercode;
+    if (!codes || !j.temperature_2m_max || !j.temperature_2m_min) { return null; }
+    return {
+      time: j.time, code: codes, max: j.temperature_2m_max, min: j.temperature_2m_min,
+      pluie: j.precipitation_probability_max || []
+    };
+  }
+
+  /** Code météo WMO → [emoji, libellé]. */
+  function infoMeteo(c) {
+    if (c === 0) { return ['☀️', 'Ensoleillé']; }
+    if (c === 1) { return ['🌤️', 'Plutôt dégagé']; }
+    if (c === 2) { return ['⛅', 'Éclaircies']; }
+    if (c === 3) { return ['☁️', 'Couvert']; }
+    if (c === 45 || c === 48) { return ['🌫️', 'Brouillard']; }
+    if (c >= 51 && c <= 57) { return ['🌦️', 'Bruine']; }
+    if (c === 61 || c === 80) { return ['🌦️', 'Averses']; }
+    if ((c >= 63 && c <= 67) || c === 81 || c === 82) { return ['🌧️', 'Pluie']; }
+    if (c === 85 || c === 86) { return ['🌨️', 'Averses de neige']; }
+    if (c >= 71 && c <= 77) { return ['❄️', 'Neige']; }
+    if (c >= 95) { return ['⛈️', 'Orage']; }
+    return ['🌡️', ''];
+  }
+
+  /* ================================================================
+     CALCUL DE LA PROCHAINE PRIÈRE
+     ================================================================ */
+
+  /** Horaires du jour demandé ; à défaut, ceux du jour le plus récent connu (approximatif). */
+  function jourDispo(jours, cle) {
+    if (jours[cle]) { return { jour: jours[cle], exact: true }; }
+    var ks = Object.keys(jours);
+    if (!ks.length) { return null; }
+    ks.sort(function (a, b) { return triable(a) < triable(b) ? -1 : 1; });
+    return { jour: jours[ks[ks.length - 1]], exact: false };
+  }
+
+  /** Les six horaires d'un jour en instants fictifs, dans l'ordre. */
+  function datesPrieres(jour, cleRef) {
+    var res = [], prec = null;
+    for (var i = 0; i < PRIERES.length; i++) {
+      var h = jour.horaires[PRIERES[i].cle];
+      if (!h) { continue; }
+      var t = pseudoDe(cleRef, h);
+      if (prec !== null && t < prec) { t += JOUR_MS; }   // horaire passé minuit (cas rare)
+      prec = t;
+      res.push({ cle: PRIERES[i].cle, t: t });
+    }
+    return res;
+  }
+
+  function calculerEtat(jours, now) {
+    var etat = { jour: null, demain: false, approx: false, prochaine: null, date: null, passees: {} };
+    var cleAuj = cleDe(now.pseudo);
+    var a = jourDispo(jours, cleAuj);
+    if (!a) { return etat; }
+
+    var prochaine = null, liste = datesPrieres(a.jour, cleAuj);
+    for (var i = 0; i < liste.length; i++) {
+      if (liste[i].t <= now.pseudo) {
+        etat.passees[liste[i].cle] = true;
+      } else if (!prochaine && (liste[i].cle !== 'Sunrise' || CHOUROUK_PROCHAINE)) {
+        prochaine = liste[i];
+      }
+    }
+    if (prochaine) {
+      etat.jour = a.jour; etat.approx = !a.exact;
+      etat.prochaine = prochaine.cle; etat.date = prochaine.t;
+      return etat;
+    }
+
+    // Après Isha : prochaine prière = Fajr de demain, rangée du bas = horaires de demain.
+    var cleDem = cleDe(now.pseudo + JOUR_MS);
+    var b = jourDispo(jours, cleDem) || a;
+    etat.jour = b.jour; etat.demain = true; etat.approx = !b.exact; etat.passees = {};
+    var ld = datesPrieres(b.jour, cleDem);
+    for (var k = 0; k < ld.length; k++) {
+      if (ld[k].cle === 'Fajr') { etat.prochaine = 'Fajr'; etat.date = ld[k].t; }
+    }
+    return etat;
+  }
+
+  /** « Dans 1 h 25 min » */
+  function texteReste(etat, now) {
+    if (!etat.date) { return ' '; }
+    var secondes = Math.max(0, (etat.date - now.pseudo) / 1000);
+    var total = Math.ceil(secondes / 60);
+    var h = Math.floor(total / 60), m = total % 60;
+    if (total <= 0) { return 'Maintenant'; }
+    if (h === 0) { return 'Dans ' + m + ' min'; }
+    if (m === 0) { return 'Dans ' + h + ' h'; }
+    return 'Dans ' + h + ' h ' + m + ' min';
+  }
+
+  /* ================================================================
+     ÉTAT DE L'APPLICATION
+     ================================================================ */
+
+  var favoris = [];
+  var ville = null;
+  var jours = {};                 // horaires de la ville affichée, par « JJ-MM-AAAA »
+  var meteo = null;               // dernière météo connue de la ville affichée
+  var meteoMaj = 0;
+
+  var generation = 0;             // change à chaque changement de ville (ignore les réponses tardives)
+  var enCours = 0;
+  var echecPrieres = false, echecMeteo = false;
+  var horsLigne = false;
+  var demandeActu = false;
+  var dernierEssai = 0;
+  var heureSucces = '';
+  var cleJourCourante = null;
+  var signatureAffichee = '';
+  var etatCourant = null;
+
+  function villeValide(v) {
+    return v && typeof v.id === 'string' && typeof v.nom === 'string' &&
+           typeof v.lat === 'number' && typeof v.lon === 'number' && typeof v.tz === 'string';
+  }
+
+  function chargerReglages() {
+    var f = lire('hp.favoris', null);
+    if (!(f instanceof Array)) { f = VILLES_DEFAUT.slice(); }
+    favoris = f.filter(villeValide);
+    var c = lire('hp.courante', null);
+    ville = villeValide(c) ? c : (favoris[0] || VILLES_DEFAUT[0]);
+  }
+
+  function chargerCaches() {
+    var p = lire('hp.p.' + ville.id, null);
+    jours = (p && typeof p === 'object') ? p : {};
+    var m = lire('hp.m.' + ville.id, null);
+    meteo = (m && m.m) ? m.m : null;
+    meteoMaj = (m && m.t) ? m.t : 0;
+  }
+
+  function sauverCaches() {
+    var ks = Object.keys(jours).sort(function (a, b) { return triable(a) < triable(b) ? 1 : -1; });
+    for (var i = 4; i < ks.length; i++) { delete jours[ks[i]]; }   // on garde les 4 jours les plus récents
+    ecrire('hp.p.' + ville.id, jours);
+    if (meteo) { ecrire('hp.m.' + ville.id, { m: meteo, t: meteoMaj }); }
+  }
+
+  /* ================================================================
+     RÉSEAU
+     ================================================================ */
+
+  function avecDelai(promesse, ms) {
+    return new Promise(function (resolve, reject) {
+      var t = setTimeout(function () { reject(new Error('delai')); }, ms);
+      promesse.then(function (v) { clearTimeout(t); resolve(v); },
+                    function (e) { clearTimeout(t); reject(e); });
+    });
+  }
+  function getJSON(url) {
+    return avecDelai(fetch(url, { cache: 'no-store' }), 20000).then(function (r) {
+      if (!r.ok) { throw new Error('http ' + r.status); }
+      return r.json();
+    });
+  }
+
+  function urlPrieres(v, cle) {
+    return 'https://api.aladhan.com/v1/timings/' + cle +
+           '?latitude=' + v.lat + '&longitude=' + v.lon +
+           '&method=' + METHODE + '&timezonestring=' + encodeURIComponent(v.tz);
+  }
+  function urlMeteo(v) {
+    return 'https://api.open-meteo.com/v1/forecast?latitude=' + v.lat + '&longitude=' + v.lon +
+           '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+           '&timezone=auto&forecast_days=5';
+  }
+  function urlRecherche(q) {
+    return 'https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) +
+           '&count=10&language=fr&format=json';
+  }
+
+  /** Télécharge les horaires d'aujourd'hui et de demain, et la météo. */
+  function actualiser() {
+    if (enCours > 0) { return; }
+    demandeActu = false;
+    dernierEssai = Date.now();
+    echecPrieres = false; echecMeteo = false;
+
+    var v = ville, g = generation;
+    var now = maintenantVille(v.tz);
+    var cles = [cleDe(now.pseudo), cleDe(now.pseudo + JOUR_MS)];
+    enCours = 3;
+
+    function fini() {
+      if (g !== generation) { return; }          // la ville a changé entre-temps
+      enCours--;
+      if (enCours > 0) { return; }
+      horsLigne = echecPrieres;
+      if (!echecPrieres) { heureSucces = hm(maintenantVille(v.tz)); }
+      sauverCaches();
+      rafraichir();
+    }
+
+    cles.forEach(function (cle) {
+      getJSON(urlPrieres(v, cle)).then(function (json) {
+        if (g !== generation) { return; }
+        var jour = decoderPrieres(json);
+        if (jour) { jours[jour.cle] = jour; } else { echecPrieres = true; }
+        fini();
+      }).catch(function () {
+        if (g !== generation) { return; }
+        echecPrieres = true; fini();
+      });
+    });
+
+    getJSON(urlMeteo(v)).then(function (json) {
+      if (g !== generation) { return; }
+      var m = decoderMeteo(json);
+      if (m) { meteo = m; meteoMaj = Date.now(); } else { echecMeteo = true; }
+      fini();
+    }).catch(function () {
+      if (g !== generation) { return; }
+      echecMeteo = true; fini();
+    });
+  }
+
+  /** Décide, chaque seconde, s'il faut recontacter les services. */
+  function planifier() {
+    if (enCours > 0) { return; }
+    var ecoule = Date.now() - dernierEssai;
+    var now = maintenantVille(ville.tz);
+    var manque = !jours[cleDe(now.pseudo)] || !jours[cleDe(now.pseudo + JOUR_MS)];
+    var delai;
+    if (demandeActu) { delai = 10000; }
+    else if (horsLigne || echecMeteo) { delai = DELAI_RETRY; }
+    else if (manque) { delai = 300000; }
+    else { delai = DELAI_ACTU; }
+    if (ecoule >= delai) { actualiser(); }
+  }
+
+  /** Au changement de jour : recharge la page (récupère aussi les mises à jour du code),
+      seulement si la page est joignable, pour ne jamais se retrouver hors connexion sur un écran vide. */
+  function rechargerSiPossible() {
+    avecDelai(fetch(window.location.href, { cache: 'no-store' }), 8000).then(function (r) {
+      if (r && r.ok) { window.location.reload(); }
+    }).catch(function () { /* hors connexion : on continue sans recharger */ });
+  }
+
+  /* ================================================================
+     INTERFACE
+     ================================================================ */
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, classe, texte) {
+    var e = document.createElement(tag);
+    if (classe) { e.className = classe; }
+    if (texte !== undefined) { e.textContent = texte; }
+    return e;
+  }
+  function poser(noeud, texte) { if (noeud.textContent !== texte) { noeud.textContent = texte; } }
+
+  var app = $('app');
+  var cartesPrieres = [];
+  var cartesMeteo = [];
+
+  function construire() {
+    var grille = $('grille');
+    PRIERES.forEach(function (p) {
+      var c = el('div', 'priere');
+      var n = el('div', 'nom', p.nom), h = el('div', 'heure', '--:--');
+      c.appendChild(n); c.appendChild(h);
+      grille.appendChild(c);
+      cartesPrieres.push({ cle: p.cle, racine: c, heure: h });
+    });
+    var bm = $('meteo');
+    for (var i = 0; i < 4; i++) {
+      var c = el('div', 'carteM' + (i === 0 ? ' auj' : ''));
+      var emo = el('div', 'emo', '·');
+      var txt = el('div', 'txt');
+      var jour = el('div', 'jour', ' ');
+      var temps = el('div', 'temps');
+      var tmax = el('span', '', '--°'), tmin = el('span', 'mini', '');
+      temps.appendChild(tmax); temps.appendChild(tmin);
+      var pluie = el('div', 'pluie', ' ');
+      txt.appendChild(jour); txt.appendChild(temps); txt.appendChild(pluie);
+      c.appendChild(emo); c.appendChild(txt);
+      bm.appendChild(c);
+      cartesMeteo.push({ emo: emo, jour: jour, tmax: tmax, tmin: tmin, pluie: pluie, racine: c });
+    }
+  }
+
+  /** Taille de base en fonction de l'écran (référence : iPad 9,7″ = 1024 × 768 pt). */
+  function adapter() {
+    var w = window.innerWidth, h = window.innerHeight;
+    var paysage = w >= h;
+    var ref = paysage ? [1024, 768] : [768, 1024];
+    var e = Math.min(w / ref[0], h / ref[1]);
+    document.documentElement.style.fontSize = (10 * e).toFixed(2) + 'px';
+    app.style.height = h + 'px';
+    var classe = paysage ? 'paysage' : 'portrait';
+    if (document.body.className !== classe) { document.body.className = classe; }
+  }
+
+  function afficherHorloge(now) {
+    poser($('hm'), hm(now));
+    poser($('sec'), pad(now.s));
+  }
+
+  function afficherMeteo(now) {
+    var iAuj = -1;
+    if (meteo) {
+      var iso = isoDe(now.pseudo);
+      iAuj = meteo.time.indexOf(iso);
+      if (iAuj < 0 && meteo.time[0] > iso) { iAuj = 0; }   // données plus récentes que le jour affiché
+    }
+    for (var i = 0; i < 4; i++) {
+      var c = cartesMeteo[i], k = iAuj + i;
+      if (iAuj < 0 || k >= meteo.time.length || meteo.code[k] === null || meteo.code[k] === undefined) {
+        poser(c.emo, '·'); poser(c.jour, i === 0 ? 'Aujourd’hui' : ' ');
+        poser(c.tmax, '--°'); poser(c.tmin, ''); poser(c.pluie, ' ');
+        continue;
+      }
+      var info = infoMeteo(meteo.code[k]);
+      var p = meteo.time[k].split('-');
+      var dow = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay();
+      poser(c.emo, info[0]);
+      c.emo.setAttribute('title', info[1]);
+      poser(c.jour, i === 0 ? 'Aujourd’hui' : JOURS[dow]);
+      poser(c.tmax, Math.round(meteo.max[k]) + '°');
+      poser(c.tmin, ' / ' + Math.round(meteo.min[k]) + '°');
+      var pl = meteo.pluie[k];
+      poser(c.pluie, (pl === null || pl === undefined) ? ' ' : '💧 ' + Math.round(pl) + ' %');
+    }
+  }
+
+  function texteEtat(etat) {
+    if (!etat.jour) {
+      return horsLigne ? 'Pas de connexion Internet — nouvel essai automatique chaque minute'
+                       : 'Chargement des horaires…';
+    }
+    if (etat.approx) {
+      return 'Hors connexion — horaires approximatifs (derniers horaires connus)';
+    }
+    if (horsLigne) { return 'Hors connexion — horaires enregistrés affichés'; }
+    var t = ville.nom + ' — horaires actualisés à ' + (heureSucces || '…');
+    if (echecMeteo) { t += ' (météo non actualisée)'; }
+    return t;
+  }
+
+  function afficher(etat, now) {
+    // Bandeau supérieur
+    var nomV = $('nomVille');
+    poser(nomV, ville.nom);
+    var cl = ville.nom.length > 18 ? 'tresLong' : (ville.nom.length > 11 ? 'long' : '');
+    if (nomV.className !== cl) { nomV.className = cl; }
+    poser($('dateGreg'), dateFrancaise(now));
+    var auj = jours[cleDe(now.pseudo)];
+    poser($('dateHegire'), auj ? dateHegirienne(auj) : ' ');
+
+    // Prochaine prière
+    poser($('titreProchaine'), etat.demain ? 'PROCHAINE PRIÈRE · DEMAIN' : 'PROCHAINE PRIÈRE');
+    if (etat.prochaine && etat.jour) {
+      poser($('nomProchaine'), NOM_PRIERE[etat.prochaine]);
+      poser($('heureProchaine'), etat.jour.horaires[etat.prochaine]);
+    } else {
+      poser($('nomProchaine'), '—'); poser($('heureProchaine'), '--:--');
+    }
+
+    // Horaires du jour
+    poser($('titreJour'), etat.demain ? 'HORAIRES DE DEMAIN' : 'HORAIRES DU JOUR');
+    cartesPrieres.forEach(function (c) {
+      poser(c.heure, (etat.jour && etat.jour.horaires[c.cle]) || '--:--');
+      var classe = 'priere';
+      if (etat.prochaine === c.cle) { classe += ' suivante'; }
+      else if (etat.passees[c.cle]) { classe += ' passee'; }
+      if (c.racine.className !== classe) { c.racine.className = classe; }
+    });
+
+    afficherMeteo(now);
+
+    var e = $('etat');
+    poser(e, texteEtat(etat));
+    var alerte = (horsLigne || etat.approx) ? 'alerte' : '';
+    if (e.className !== alerte) { e.className = alerte; }
+  }
+
+  /** Appelé chaque seconde. */
+  function tic() {
+    var now = maintenantVille(ville.tz);
+    afficherHorloge(now);
+
+    var cleAuj = cleDe(now.pseudo);
+    if (cleJourCourante && cleJourCourante !== cleAuj) {
+      demandeActu = true;
+      rechargerSiPossible();
+    }
+    cleJourCourante = cleAuj;
+
+    var etat = calculerEtat(jours, now);
+    etatCourant = etat;
+    var signature = [ville.id, cleAuj, etat.jour ? etat.jour.cle : '-', etat.prochaine || '-',
+                     Object.keys(etat.passees).length, etat.approx, horsLigne, echecMeteo,
+                     heureSucces, meteoMaj].join('|');
+    if (signature !== signatureAffichee) {
+      signatureAffichee = signature;
+      afficher(etat, now);
+    }
+    poser($('resteProchaine'), texteReste(etat, now));
+    planifier();
+  }
+
+  function rafraichir() { signatureAffichee = ''; tic(); }
+
+  function boucle() {
+    tic();
+    setTimeout(boucle, 1000 - (Date.now() % 1000) + 5);   // calé sur le début de chaque seconde
+  }
+
+  /* ================================================================
+     CHOIX DE LA VILLE : recherche et favoris
+     ================================================================ */
+
+  var panneau = $('panneau'), champ = $('champ');
+  var resultats = [], messageRecherche = '', numRecherche = 0, minuteurRecherche = null;
+
+  function estFavori(id) {
+    for (var i = 0; i < favoris.length; i++) { if (favoris[i].id === id) { return true; } }
+    return false;
+  }
+  function basculerFavori(v) {
+    if (estFavori(v.id)) {
+      favoris = favoris.filter(function (f) { return f.id !== v.id; });
+    } else {
+      favoris.push({ id: v.id, nom: v.nom, detail: v.detail, lat: v.lat, lon: v.lon, tz: v.tz });
+    }
+    ecrire('hp.favoris', favoris);
+  }
+
+  function choisir(v) {
+    ville = { id: v.id, nom: v.nom, detail: v.detail, lat: v.lat, lon: v.lon, tz: v.tz };
+    ecrire('hp.courante', ville);
+    generation++; enCours = 0;
+    horsLigne = false; echecPrieres = false; echecMeteo = false; demandeActu = false;
+    heureSucces = ''; cleJourCourante = null;
+    chargerCaches();
+    fermerPanneau();
+    rafraichir();
+    actualiser();
+  }
+
+  function ligneVille(v) {
+    var fav = estFavori(v.id);
+    var l = el('div', 'ligne' + (v.id === ville.id ? ' courante' : ''));
+    var z = el('div', 'zone');
+    z.appendChild(el('div', 'nomv', v.nom));
+    z.appendChild(el('div', 'detv', v.detail || ' '));
+    z.onclick = function () { choisir(v); };
+    var e = el('div', 'etoile' + (fav ? ' on' : ''), fav ? '★' : '☆');
+    e.onclick = function (ev) { ev.stopPropagation(); basculerFavori(v); rendreListes(); };
+    l.appendChild(z); l.appendChild(e);
+    return l;
+  }
+
+  function vider(n) { while (n.firstChild) { n.removeChild(n.firstChild); } }
+
+  function rendreListes() {
+    var lf = $('listeFavoris');
+    vider(lf);
+    if (!favoris.length) {
+      lf.appendChild(el('div', 'msg', 'Aucun favori. Cherchez une ville, puis touchez l’étoile ☆ pour l’ajouter.'));
+    }
+    favoris.forEach(function (v) { lf.appendChild(ligneVille(v)); });
+
+    var bloc = $('blocResultats'), lr = $('listeResultats');
+    vider(lr);
+    var actif = champ.value.replace(/^\s+|\s+$/g, '').length >= 2;
+    bloc.style.display = actif ? 'block' : 'none';
+    if (messageRecherche) { lr.appendChild(el('div', 'msg', messageRecherche)); }
+    resultats.forEach(function (v) { lr.appendChild(ligneVille(v)); });
+  }
+
+  function versVille(r) {
+    var dept = r.admin2 || r.admin1 || '';
+    var detail = dept;
+    if (r.country) { detail += (detail ? ', ' : '') + r.country; }
+    if (r.postcodes && r.postcodes.length === 1) { detail = r.postcodes[0] + ' · ' + detail; }
+    return {
+      id: 'g' + r.id, nom: r.name, detail: detail,
+      lat: r.latitude, lon: r.longitude, tz: r.timezone || 'Europe/Paris'
+    };
+  }
+
+  function chercher() {
+    var q = champ.value.replace(/^\s+|\s+$/g, '');
+    var n = ++numRecherche;
+    if (q.length < 2) { resultats = []; messageRecherche = ''; rendreListes(); return; }
+    resultats = []; messageRecherche = 'Recherche en cours…'; rendreListes();
+    getJSON(urlRecherche(q)).then(function (json) {
+      if (n !== numRecherche) { return; }
+      resultats = (json.results || []).filter(function (r) {
+        return typeof r.latitude === 'number' && typeof r.longitude === 'number';
+      }).map(versVille);
+      messageRecherche = resultats.length ? '' : 'Aucune ville trouvée';
+      rendreListes();
+    }).catch(function () {
+      if (n !== numRecherche) { return; }
+      resultats = []; messageRecherche = 'Pas de connexion Internet : recherche impossible';
+      rendreListes();
+    });
+  }
+
+  function ouvrirPanneau() {
+    champ.value = ''; resultats = []; messageRecherche = '';
+    rendreListes();
+    panneau.style.display = 'block';
+    panneau.scrollTop = 0;
+  }
+  function fermerPanneau() {
+    panneau.style.display = 'none';
+    champ.blur();
+  }
+
+  /* ================================================================
+     DÉMARRAGE
+     ================================================================ */
+
+  function demarrer() {
+    chargerReglages();
+    chargerCaches();
+    construire();
+    adapter();
+
+    $('btnVille').onclick = ouvrirPanneau;
+    $('btnFermer').onclick = fermerPanneau;
+    champ.addEventListener('input', function () {
+      clearTimeout(minuteurRecherche);
+      minuteurRecherche = setTimeout(chercher, 350);
+    });
+    champ.addEventListener('keydown', function (ev) {
+      if (ev.keyCode === 13) { ev.preventDefault(); champ.blur(); clearTimeout(minuteurRecherche); chercher(); }
+    });
+
+    window.addEventListener('resize', adapter);
+    window.addEventListener('orientationchange', function () { setTimeout(adapter, 300); });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) { adapter(); demandeActu = true; rafraichir(); }
+    });
+
+    boucle();
+    actualiser();
+
+    if ('serviceWorker' in navigator) {
+      try { navigator.serviceWorker.register('sw.js'); } catch (e) { /* ignoré */ }
+    }
+  }
+
+  // Accès pour les tests automatiques (sans effet sur l'application).
+  window.HP = {
+    nettoyerHeure: nettoyerHeure, decoderPrieres: decoderPrieres, decoderMeteo: decoderMeteo,
+    infoMeteo: infoMeteo, calculerEtat: calculerEtat, texteReste: texteReste,
+    maintenantVille: maintenantVille, cleDe: cleDe, dateFrancaise: dateFrancaise,
+    dateHegirienne: dateHegirienne, versVille: versVille, urlPrieres: urlPrieres,
+    urlMeteo: urlMeteo, urlRecherche: urlRecherche
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', demarrer);
+  } else {
+    demarrer();
+  }
+})();
+</script>
+</body>
+</html>
